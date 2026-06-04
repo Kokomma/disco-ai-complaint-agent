@@ -133,7 +133,7 @@ Respond ONLY with valid JSON, no markdown, no extra text:
         )
 
     if r.status_code != 200:
-        logger.error(f"Claude API error: {r.status_code}")
+        logger.error(f"Claude API error: {r.status_code} — {r.text}")
         raise Exception("Classification service unavailable")
 
     text = r.json()["content"][0]["text"].strip()
