@@ -124,7 +124,7 @@ Respond ONLY with valid JSON, no markdown, no extra text:
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-sonnet-4-5",
                 "max_tokens": 800,
                 "system": system_prompt,
                 "messages": [{"role": "user",
