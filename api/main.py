@@ -115,33 +115,42 @@ Respond ONLY with valid JSON, no markdown, no extra text:
   "escalation_reason": "<reason if escalate true, else null>"
 }"""
 
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-1.5-flash:generateContent?key={gemini_key}"
+    )
+
+    payload = {
+        "contents": [{
+            "parts": [{
+                "text": f"{system_prompt}\n\nCustomer: {phone}\nMessage: {message}"
+            }]
+        }],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 800,
+        }
+    }
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-5",
-                "max_tokens": 800,
-                "system": system_prompt,
-                "messages": [{"role": "user",
-                               "content": f"Customer: {phone}\nMessage: {message}"}],
-            }
-        )
+        r = await client.post(url, json=payload)
 
     if r.status_code != 200:
-        logger.error(f"Claude API error: {r.status_code} — {r.text}")
+        logger.error(f"Gemini API error: {r.status_code} — {r.text}")
         raise Exception("Classification service unavailable")
 
-    text = r.json()["content"][0]["text"].strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text.strip())
+    try:
+        text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        return json.loads(text.strip())
+    except Exception as e:
+        logger.error(f"Gemini response parse error: {e} — {r.text[:300]}")
+        raise Exception("Failed to parse AI response")
+
 
 
 async def save_ticket(ticket: dict):
